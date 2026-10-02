@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "akaani-scaffold",
-    "slug": "akaani-scaffold",
+    "name": "Akaani",
+    "slug": "akaani",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "akaaniscaffold",
+    "scheme": "akaani",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
@@ -28,11 +28,25 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#F7F7F7",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Akaani uses the camera to scan meals and estimate their calories and macros."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Akaani uses your photos so you can set a profile picture.",
+          "cameraPermission": "Akaani uses the camera to take your profile picture and scan meals."
+        }
+      ],
+      "./plugins/withPlayBillingLaunchMode"
     ],
     "experiments": {
       "typedRoutes": true,

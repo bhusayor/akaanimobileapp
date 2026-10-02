@@ -1,0 +1,15 @@
+import { Stack } from 'expo-router';
+import { useColors } from '../../theme';
+
+export default function SettingsLayout() {
+  const colors = useColors();
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.bg },
+        animation: 'slide_from_right',
+      }}
+    />
+  );
+}
