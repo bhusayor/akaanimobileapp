@@ -10,7 +10,9 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { displayName, login, usingPlatformApi } from '../../api/platform';
 import { Button, Field, OrDivider, PressableScale, SocialButton } from '../../components/ui';
+import { saveToken } from '../../lib/session';
 import { useStore } from '../../lib/store';
 import { themedStyles, useColors, font } from '../../theme';
 
@@ -24,6 +26,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [social, setSocial] = useState<'google' | 'apple' | null>(null);
 
   /**
@@ -43,13 +46,31 @@ export default function Login() {
     }, 900);
   };
 
-  const submit = () => {
+  const submit = async () => {
     const e: typeof errors = {};
     if (!/^\S+@\S+\.\S+$/.test(email)) e.email = 'Enter a valid email address';
-    if (password.length < 6) e.password = 'Password must be at least 6 characters';
+    // platform-api rejects passwords under 8 characters before checking them.
+    if (password.length < 8) e.password = 'Password must be at least 8 characters';
     setErrors(e);
+    setFormError(null);
     if (Object.keys(e).length) return;
     setLoading(true);
+
+    if (usingPlatformApi) {
+      try {
+        const res = await login(email, password);
+        await saveToken(res.token);
+        signIn(displayName(res.user), res.user.email);
+        router.replace(setupDone ? '/(tabs)' : '/setup/preferences');
+      } catch (err) {
+        setFormError((err as Error).message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // No platform-api configured: local-only sign-in, as before.
     setTimeout(() => {
       const name = email.split('@')[0].replace(/[._-]/g, ' ');
       signIn(name.charAt(0).toUpperCase() + name.slice(1), email.trim());
@@ -110,6 +131,7 @@ export default function Login() {
           <Link href="/(auth)/forgot-password" asChild>
             <Text style={styles.forgot}>Forgot password?</Text>
           </Link>
+          {!!formError && <Text style={styles.formError}>{formError}</Text>}
           <Button title="Sign in" onPress={submit} loading={loading} style={{ marginTop: 8 }} />
         </Animated.View>
 
@@ -143,6 +165,7 @@ const useStyles = themedStyles((colors) => ({
     color: colors.secondary,
     alignSelf: 'flex-end',
   },
+  formError: { fontFamily: font.medium, fontSize: 13.5, color: colors.danger, textAlign: 'center' },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 'auto', paddingTop: 40 },
   footerText: { fontFamily: font.regular, fontSize: 15, color: colors.inkSoft },
   footerLink: { fontFamily: font.semibold, fontSize: 15, color: colors.primary },

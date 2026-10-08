@@ -87,6 +87,7 @@ function RootNavigator() {
                 <Stack.Screen name="streak" options={{ animation: 'slide_from_right' }} />
                 <Stack.Screen name="notifications" options={{ animation: 'slide_from_right' }} />
                 <Stack.Screen name="scan" options={{ animation: 'slide_from_bottom' }} />
+                <Stack.Screen name="scan-review" options={{ animation: 'fade' }} />
                 <Stack.Screen name="analytics" options={{ animation: 'slide_from_right' }} />
                 <Stack.Screen name="cuisines" options={{ animation: 'slide_from_right' }} />
                 <Stack.Screen name="collection/[id]" options={{ animation: 'slide_from_right' }} />
