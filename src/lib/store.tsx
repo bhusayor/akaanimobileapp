@@ -7,7 +7,9 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { usingPlatformApi } from '../api/platform';
 import { MEALS, mealById, planForDay } from '../data/meals';
+import { clearToken, loadToken } from './session';
 
 export type LoggedMeal = {
   id: string; // unique log id
@@ -159,12 +161,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
-    AsyncStorage.getItem(KEY)
-      .then((raw) => {
+    Promise.all([AsyncStorage.getItem(KEY), loadToken()])
+      .then(([raw, token]) => {
         if (raw) {
           const s = JSON.parse(raw);
           setSeenOnboarding(!!s.seenOnboarding);
-          setUser(s.user ?? null);
+          // With platform-api on, an account without a token can't call it —
+          // send that user back through login rather than failing later.
+          setUser(usingPlatformApi && !token ? null : (s.user ?? null));
           setSetupDone(!!s.setupDone);
           setPrefs(s.prefs ?? DEFAULT_PREFS);
           setGoals(s.goals ?? DEFAULT_GOALS);
@@ -216,6 +220,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setUser((prev) => (prev ? { ...prev, ...patch } : prev));
   }, []);
   const signOut = useCallback(() => {
+    clearToken();
     setUser(null);
     setSetupDone(false);
   }, []);
@@ -247,6 +252,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setSettings((prev) => ({ ...prev, ...patch }));
   }, []);
   const deleteAccount = useCallback(() => {
+    clearToken();
     setUser(null);
     setSetupDone(false);
     setPrefs(DEFAULT_PREFS);

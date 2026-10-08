@@ -11,7 +11,9 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { displayName, signup, usingPlatformApi } from '../../api/platform';
 import { Button, Field, OrDivider, PressableScale, SocialButton } from '../../components/ui';
+import { saveToken } from '../../lib/session';
 import { useStore } from '../../lib/store';
 import { themedStyles, useColors, font } from '../../theme';
 
@@ -24,8 +26,10 @@ export default function Signup() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({});
+  const [phone, setPhone] = useState('');
+  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; phone?: string }>({});
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [social, setSocial] = useState<'google' | 'apple' | null>(null);
 
   /** Mocked OAuth — see the note in login.tsx. */
@@ -41,14 +45,37 @@ export default function Signup() {
     }, 900);
   };
 
-  const submit = () => {
+  const submit = async () => {
     const e: typeof errors = {};
+    // platform-api needs a first and a last name, each at least 2 characters.
+    const [first = '', ...rest] = name.trim().split(/\s+/);
+    const last = rest.join(' ');
     if (name.trim().length < 2) e.name = 'Tell us what to call you';
+    else if (usingPlatformApi && (first.length < 2 || last.length < 2)) e.name = 'Enter your first and last name';
     if (!/^\S+@\S+\.\S+$/.test(email)) e.email = 'Enter a valid email address';
-    if (password.length < 6) e.password = 'Use at least 6 characters';
+    if (password.length < 8) e.password = 'Use at least 8 characters';
+    const digits = phone.replace(/[^\d+]/g, '');
+    if (usingPlatformApi && (digits.length < 7 || digits.length > 14)) e.phone = 'Enter a valid phone number';
     setErrors(e);
+    setFormError(null);
     if (Object.keys(e).length) return;
     setLoading(true);
+
+    if (usingPlatformApi) {
+      try {
+        const res = await signup({ first_name: first, last_name: last, email: email.trim(), password, phone: digits });
+        await saveToken(res.token);
+        signIn(displayName(res.user), res.user.email);
+        router.replace('/setup/preferences');
+      } catch (err) {
+        setFormError((err as Error).message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // No platform-api configured: local-only account, as before.
     setTimeout(() => {
       signIn(name.trim(), email.trim());
       router.replace('/setup/preferences');
@@ -112,12 +139,24 @@ export default function Signup() {
           />
           <Field
             label="Password"
-            placeholder="Minimum 6 characters"
+            placeholder="Minimum 8 characters"
             secureTextEntry
             value={password}
             onChangeText={setPassword}
             error={errors.password}
           />
+          {usingPlatformApi && (
+            <Field
+              label="Phone"
+              placeholder="+2348012345678"
+              keyboardType="phone-pad"
+              autoComplete="tel"
+              value={phone}
+              onChangeText={setPhone}
+              error={errors.phone}
+            />
+          )}
+          {!!formError && <Text style={styles.formError}>{formError}</Text>}
           <Button title="Create account" onPress={submit} loading={loading} style={{ marginTop: 8 }} />
           <Text style={styles.terms}>
             By continuing you agree to Akaani's Terms of Service and Privacy Policy.
@@ -152,6 +191,7 @@ const useStyles = themedStyles((colors) => ({
   sub: { fontFamily: font.regular, fontSize: 15.5, color: colors.inkSoft, marginTop: 10 },
   social: { marginTop: 28, gap: 12 },
   form: { marginTop: 20, gap: 18 },
+  formError: { fontFamily: font.medium, fontSize: 13.5, color: colors.danger, textAlign: 'center' },
   terms: { fontFamily: font.regular, fontSize: 12.5, color: colors.inkFaint, textAlign: 'center', lineHeight: 18 },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 'auto', paddingTop: 32 },
   footerText: { fontFamily: font.regular, fontSize: 15, color: colors.inkSoft },

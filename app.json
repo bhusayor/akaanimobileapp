@@ -46,7 +46,8 @@
           "cameraPermission": "Akaani uses the camera to take your profile picture and scan meals."
         }
       ],
-      "./plugins/withPlayBillingLaunchMode"
+      "./plugins/withPlayBillingLaunchMode",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
